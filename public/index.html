@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Audio Compile Agent</title>
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card-bg: #161f30;
+      --accent: #10b981;
+      --accent-glow: rgba(16, 185, 129, 0.25);
+      --text: #f3f4f6;
+      --muted: #9ca3af;
+      --task: #3b82f6;
+      --query: #f59e0b;
+      --note: #10b981;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', system-ui, sans-serif; }
+    body { background-color: var(--bg); color: var(--text); padding: 2rem; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+    
+    .container { width: 100%; max-width: 900px; display: flex; flex-direction: column; gap: 1.5rem; }
+    
+    header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1f293d; padding-bottom: 1rem; }
+    h1 { font-size: 1.6rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 0.5rem; background: linear-gradient(to right, #ffffff, #e5e7eb); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+    .status-pill { display: flex; align-items: center; gap: 0.5rem; background: rgba(0, 0, 0, 0.4); padding: 0.4rem 0.9rem; border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.05); font-size: 0.85rem; }
+    .status-dot { width: 10px; height: 10px; border-radius: 50%; background-color: #6b7280; }
+    .status-dot.active { background-color: var(--accent); box-shadow: 0 0 12px var(--accent); animation: pulse 1.5s infinite; }
+
+    @keyframes pulse {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.15); opacity: 1; }
+      100% { transform: scale(0.95); opacity: 0.8; }
+    }
+
+    /* Controls & Audio Wave */
+    .controls-card { background: var(--card-bg); padding: 1.5rem; border-radius: 12px; border: 1px solid #1f293d; display: flex; flex-direction: column; gap: 1rem; }
+    .btn-group { display: flex; gap: 1rem; flex-wrap: wrap; }
+    
+    button { padding: 0.75rem 1.25rem; border-radius: 8px; font-weight: 600; cursor: pointer; border: none; transition: all 0.2s ease; display: flex; align-items: center; gap: 0.5rem; }
+    .btn-primary { background: var(--accent); color: #000; font-weight: 700; box-shadow: 0 0 12px var(--accent-glow); }
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-secondary { background: #1f293d; color: var(--text); border: 1px solid #374151; }
+    .btn-secondary:hover { background: #374151; }
+    .btn-demo { background: #8b5cf6; color: white; }
+
+    /* Visualizer canvas */
+    canvas { width: 100%; height: 60px; background: #0e1422; border-radius: 8px; }
+
+    /* Main Grid */
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+
+    .panel { background: var(--card-bg); border-radius: 12px; border: 1px solid #1f293d; padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem; height: 420px; }
+    .panel-title { font-size: 0.9rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; display: flex; justify-content: space-between; }
+
+    .stream-box, .cards-box { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 0.75rem; padding-right: 0.25rem; }
+    
+    .raw-text { font-family: monospace; font-size: 0.9rem; color: #d1d5db; line-height: 1.5; white-space: pre-wrap; }
+    
+    /* Categorized Action Cards */
+    .card { background: #0f172a; padding: 0.75rem; border-radius: 8px; border-left: 4px solid var(--accent); animation: fadeIn 0.3s ease; }
+    .card.TASK { border-left-color: var(--task); }
+    .card.QUERY { border-left-color: var(--query); }
+    .card.NOTE { border-left-color: var(--note); }
+    
+    .card-header { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; margin-bottom: 0.25rem; display: flex; justify-content: space-between; }
+    .card.TASK .card-header { color: var(--task); }
+    .card.QUERY .card-header { color: var(--query); }
+    .card.NOTE .card-header { color: var(--note); }
+    .card-body { font-size: 0.875rem; color: #f3f4f6; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+    .metrics { display: flex; gap: 1rem; font-size: 0.8rem; color: var(--muted); }
+    .metric-value { color: #fff; font-weight: 600; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>Audio Compile Agent</h1>
+    <div class="status-pill">
+      <div id="statusDot" class="status-dot"></div>
+      <span id="statusText">Ready to compile</span>
+    </div>
+  </header>
+
+  <section class="controls-card">
+    <div class="btn-group">
+      <button id="toggleMicBtn" class="btn-primary" onclick="toggleListening()">
+        🎤 Start Live Listening
+      </button>
+      <button id="demoBtn" class="btn-demo" onclick="runPresetDemo()">
+        ⚡ Run Pitch Demo
+      </button>
+      <button class="btn-secondary" onclick="exportReport()">
+        💾 Export Clean Report (.txt)
+      </button>
+      <button class="btn-secondary" onclick="clearAll()">
+        🗑️ Clear
+      </button>
+    </div>
+    <canvas id="visualizer"></canvas>
+  </section>
+
+  <div class="grid">
+    <!-- Unstructured Raw Stream -->
+    <div class="panel">
+      <div class="panel-title">Raw Audio Stream <span class="metrics">Words: <span id="wordCount" class="metric-value">0</span></span></div>
+      <div class="stream-box" id="rawStream">
+        <span class="raw-text" style="color: #6b7280;">Press "Start Live Listening" or "Run Pitch Demo" to begin streaming audio...</span>
+      </div>
+    </div>
+
+    <!-- Structured Action Cards -->
+    <div class="panel">
+      <div class="panel-title">Real-Time Intent Compilation <span class="metrics">Actions Tagged: <span id="actionCount" class="metric-value">0</span></span></div>
+      <div class="cards-box" id="cardsBox">
+        <!-- Cards insert dynamically -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let isListening = false;
+  let isRunningDemo = false;
+  let recognition = null;
+  let audioCtx, analyser, dataArray, canvas, ctx, animationId;
+  let wordTotal = 0;
+  let actionTotal = 0;
+  let demoTimer = null;
+
+  const synth = window.speechSynthesis;
+
+  // Speech Recognition setup
+  if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = false;
+
+    recognition.onstart = () => {
+      isListening = true;
+      const btn = document.getElementById('toggleMicBtn');
+      btn.innerText = "🛑 Stop Listening";
+      btn.style.background = "#ef4444";
+      btn.style.color = "#ffffff";
+      document.getElementById('statusDot').classList.add('active');
+      document.getElementById('statusText').innerText = "Agent Active & Processing";
+    };
+
+    recognition.onresult = (event) => {
+      const lastIndex = event.results.length - 1;
+      const textPhrase = event.results[lastIndex][0].transcript.trim();
+      if (textPhrase) {
+        processTranscriptChunk(textPhrase);
+      }
+    };
+
+    recognition.onerror = (e) => {
+      console.warn("Speech API error:", e.error);
+      if(e.error === 'not-allowed') {
+        alert("Microphone permission denied. Try clicking 'Run Pitch Demo' instead.");
+      }
+    };
+
+    recognition.onend = () => {
+      if (isListening && !isRunningDemo) {
+        try { recognition.start(); } catch (err) {}
+      }
+    };
+  } else {
+    alert("Web Speech API isn't fully supported in this browser. Use 'Run Pitch Demo' for demonstration!");
+  }
+
+  function toggleListening() {
+    if (isRunningDemo) {
+      stopDemo();
+    }
+    if (!recognition) return alert("Speech recognition unavailable.");
+    const btn = document.getElementById('toggleMicBtn');
+    
+    if (!isListening) {
+      try {
+        recognition.start();
+        startAudioVisualizer();
+      } catch (err) {
+        console.error("Mic start err:", err);
+      }
+    } else {
+      isListening = false;
+      recognition.stop();
+      stopAudioVisualizer();
+      btn.innerText = "🎤 Start Live Listening";
+      btn.style.background = "var(--accent)";
+      btn.style.color = "#000";
+      document.getElementById('statusDot').classList.remove('active');
+      document.getElementById('statusText').innerText = "Session Stopped";
+    }
+  }
+
+  function processTranscriptChunk(text) {
+    const rawBox = document.getElementById('rawStream');
+    if (rawBox.children[0]?.style?.color) rawBox.innerHTML = '';
+
+    // Append to raw transcript
+    const p = document.createElement('p');
+    p.className = 'raw-text';
+    p.innerText = text;
+    rawBox.appendChild(p);
+    rawBox.scrollTop = rawBox.scrollHeight;
+
+    // Update Word Count
+    const words = text.trim().split(/\s+/).filter(Boolean).length;
+    wordTotal += words;
+    document.getElementById('wordCount').innerText = wordTotal;
+
+    // Parse Intent
+    parseIntentAndAddCard(text);
+  }
+
+  function parseIntentAndAddCard(text) {
+    const lower = text.toLowerCase().trim();
+    let type = 'NOTE';
+    
+    if (/^(hello|hi|hey|whatsapp|whats up|good morning|good evening|thanks|thank you|bye)$/i.test(lower) || 
+        /^(hello|hi|hey)\s+(there|everyone|team|whatsapp|guys)$/i.test(lower)) {
+      type = 'GREETING';
+    } 
+    else if (/\b(need to|have to|must|will do|action item|task|todo|assign|remember to|deadline|finish|submit|build|fix|update|send|change|create)\b/i.test(lower)) {
+      type = 'TASK';
+    } 
+    else if (/\b(what|why|how|when|where|who|which)\b/i.test(lower) || 
+             /\b(can we|should we|could you|is it|are we|do you|tell me|check)\b/i.test(lower) || 
+             lower.includes('?')) {
+      type = 'QUERY';
+    }
+
+    const cardsBox = document.getElementById('cardsBox');
+    const card = document.createElement('div');
+    card.className = `card ${type}`;
+    
+    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    card.innerHTML = `
+      <div class="card-header">
+        <span>[${type}]</span>
+        <span>${time}</span>
+      </div>
+      <div class="card-body">${text}</div>
+    `;
+
+    cardsBox.appendChild(card);
+    cardsBox.scrollTop = cardsBox.scrollHeight;
+
+    actionTotal++;
+    document.getElementById('actionCount').innerText = actionTotal;
+  }
+
+  // Pre-scripted demo sequence synced directly with Audio completion
+  function runPresetDemo() {
+    if (isListening) toggleListening();
+    clearAll();
+    
+    isRunningDemo = true;
+    document.getElementById('statusDot').classList.add('active');
+    document.getElementById('statusText').innerText = "Simulating Team Audio...";
+    document.getElementById('demoBtn').style.background = "#4f46e5";
+    
+    startAudioVisualizer(true);
+
+    const demoScript = [
+      "Hello everyone, welcome to the project review meeting.",
+      "What is the final deadline for the code submission tonight?",
+      "We need to fix the database authorization edge case immediately.",
+      "Please assign the frontend deployment pipeline task to Sarah.",
+      "Note that all API keys should be properly encrypted before pushing to Github."
+    ];
+
+    let currentIndex = 0;
+
+    function playNextStep() {
+      if (!isRunningDemo || currentIndex >= demoScript.length) {
+        stopDemo();
+        return;
+      }
+
+      const currentText = demoScript[currentIndex];
+      currentIndex++;
+
+      // Process and render text on screen
+      processTranscriptChunk(currentText);
+
+      // Speak text fully before queueing next line
+      if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(currentText);
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
+        utterance.lang = 'en-US';
+
+        // Wait for speech to end completely before proceeding
+        utterance.onend = () => {
+          if (isRunningDemo) {
+            demoTimer = setTimeout(playNextStep, 800); // 800ms natural break between speech
+          }
+        };
+
+        utterance.onerror = () => {
+          if (isRunningDemo) {
+            demoTimer = setTimeout(playNextStep, 1000);
+          }
+        };
+
+        synth.speak(utterance);
+      } else {
+        demoTimer = setTimeout(playNextStep, 3500);
+      }
+    }
+
+    playNextStep();
+  }
+
+  function stopDemo() {
+    isRunningDemo = false;
+    if (synth) synth.cancel();
+    if (demoTimer) clearTimeout(demoTimer);
+    stopAudioVisualizer();
+    document.getElementById('statusDot').classList.remove('active');
+    document.getElementById('statusText').innerText = "Demo Ended";
+    document.getElementById('demoBtn').style.background = "#8b5cf6";
+  }
+
+  // Visualizer Logic
+  function startAudioVisualizer(isSimulated = false) {
+    canvas = document.getElementById('visualizer');
+    ctx = canvas.getContext('2d');
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+
+    if (!isSimulated && navigator.mediaDevices?.getUserMedia) {
+      navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        analyser = audioCtx.createAnalyser();
+        const source = audioCtx.createMediaStreamSource(stream);
+        source.connect(analyser);
+        analyser.fftSize = 64;
+        dataArray = new Uint8Array(analyser.frequencyBinCount);
+        draw();
+      }).catch(() => drawSimulatedWave());
+    } else {
+      drawSimulatedWave();
+    }
+  }
+
+  function draw() {
+    if (!isListening) return;
+    animationId = requestAnimationFrame(draw);
+    analyser.getByteFrequencyData(dataArray);
+    renderBars(dataArray);
+  }
+
+  function drawSimulatedWave() {
+    if (!isRunningDemo) return;
+    animationId = requestAnimationFrame(drawSimulatedWave);
+    const simulatedData = new Uint8Array(32).map(() => Math.floor(Math.random() * 180 + 20));
+    renderBars(simulatedData);
+  }
+
+  function renderBars(data) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const barWidth = (canvas.width / data.length) * 1.5;
+    let x = 0;
+
+    for (let i = 0; i < data.length; i++) {
+      const barHeight = (data[i] / 255) * canvas.height;
+      ctx.fillStyle = '#10b981';
+      ctx.fillRect(x, canvas.height - barHeight, barWidth - 2, barHeight);
+      x += barWidth;
+    }
+  }
+
+  function stopAudioVisualizer() {
+    if (animationId) cancelAnimationFrame(animationId);
+    if (ctx && canvas) ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+
+  function clearAll() {
+    if (synth) synth.cancel();
+    if (demoTimer) clearTimeout(demoTimer);
+    document.getElementById('rawStream').innerHTML = '<span class="raw-text" style="color: #6b7280;">Press "Start Live Listening" or "Run Pitch Demo" to begin streaming audio...</span>';
+    document.getElementById('cardsBox').innerHTML = '';
+    wordTotal = 0;
+    actionTotal = 0;
+    document.getElementById('wordCount').innerText = '0';
+    document.getElementById('actionCount').innerText = '0';
+  }
+
+  function exportReport() {
+    const cards = document.querySelectorAll('.card');
+    if (!cards.length) return alert("No transcript data available to export.");
+
+    let output = `=======================================\n`;
+    output += `AUDIO COMPILE AGENT - EXECUTIVE SUMMARY\n`;
+    output += `Generated: ${new Date().toLocaleString()}\n`;
+    output += `=======================================\n\n`;
+
+    cards.forEach(c => {
+      const header = c.querySelector('.card-header').innerText;
+      const body = c.querySelector('.card-body').innerText;
+      output += `${header}\n${body}\n---------------------------------------\n`;
+    });
+
+    const blob = new Blob([output], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Audio_Compile_Summary_${Date.now()}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+</script>
+
+</body>
+</html>
