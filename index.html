@@ -422,6 +422,34 @@
     a.click();
     URL.revokeObjectURL(url);
   }
+  // This ensures it works on both laptops and phones
+window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+if (!window.SpeechRecognition) {
+    alert("Speech Recognition is not supported on this browser. Please use Google Chrome on Android.");
+} else {
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false; // Set to true if you want continuous listening
+    recognition.interimResults = true; // Shows words as you speak
+
+    recognition.onresult = function(event) {
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+            transcript += event.results[i][0].transcript;
+        }
+        // This puts the spoken text directly into your text box/display element
+        document.getElementById('output').innerText = transcript;
+    };
+
+    recognition.onerror = function(event) {
+        console.error("Speech recognition error", event.error);
+    };
+
+    // Trigger this when your "Start Listening" button is clicked
+    function startListening() {
+        recognition.start();
+    }
+}
 </script>
 
 </body>
