@@ -428,8 +428,9 @@ window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecogn
 if (!window.SpeechRecognition) {
     alert("Speech Recognition is not supported on this browser. Please use Google Chrome on Android.");
 } else {
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'en-US';
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+const recognition = new SpeechRecognition();
+recognition.lang = 'en-US';
     recognition.continuous = false; // Set to true if you want continuous listening
     recognition.interimResults = true; // Shows words as you speak
 
