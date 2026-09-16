@@ -374,7 +374,6 @@
  function renderBars(data) {
     if (!canvas || !ctx) return;
     
-    // Ensure canvas backing store matches display size cleanly
     if (canvas.width !== canvas.offsetWidth || canvas.height !== canvas.offsetHeight) {
       canvas.width = canvas.offsetWidth || 300;
       canvas.height = canvas.offsetHeight || 100;
@@ -382,39 +381,36 @@
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    const totalLines = 24; // Rich multi-line density
+    const totalLines = 18; // Clean, distinct count for better spacing
     const centerY = canvas.height / 2;
-    const maxAmplitude = canvas.height * 0.42; // Expand vertical reach
+    const maxAmplitude = canvas.height * 0.45;
 
-    // Generate smooth normalized points from data with an active fallback
-    const sliceSize = Math.max(1, Math.floor(data.length / 12));
+    const sliceSize = Math.max(1, Math.floor(data.length / 10));
     const points = [];
     
     for (let i = 0; i < data.length; i += sliceSize) {
       let val = data[i] / 255;
-      // If audio signal is quiet, inject a lively organic sine wave motion so it never flattens
+      // Slower, smoother fallback motion (divided by 1200 instead of 180)
       if (val < 0.05) {
-        val = 0.25 + Math.sin(i * 0.8 + Date.now() / 180) * 0.15;
+        val = 0.25 + Math.sin(i * 0.5 + Date.now() / 1200) * 0.15;
       }
       points.push(val);
     }
 
     const sliceWidth = canvas.width / Math.max(1, points.length - 1);
 
-    // Draw lines from background to foreground
     for (let l = 0; l < totalLines; l++) {
       ctx.beginPath();
 
-      // Center lines get bright glowing cyan, outer layers fade into deep royal blue
       const isCore = l >= totalLines * 0.35 && l <= totalLines * 0.65;
-      const alpha = isCore ? 0.85 : 0.25 + (1 - (l / totalLines)) * 0.3;
+      const alpha = isCore ? 0.9 : 0.2 + (1 - (l / totalLines)) * 0.35;
       
       if (isCore) {
-        ctx.strokeStyle = `rgba(56, 189, 248, ${alpha})`; // Glowing Cyan Core
-        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = `rgba(56, 189, 248, ${alpha})`;
+        ctx.lineWidth = 1.8; // Thicker core lines
       } else {
-        ctx.strokeStyle = `rgba(37, 99, 235, ${alpha})`; // Deep Vector Blue Outer
-        ctx.lineWidth = 0.9;
+        ctx.strokeStyle = `rgba(37, 99, 235, ${alpha})`;
+        ctx.lineWidth = 1.1; // Thicker outer lines
       }
 
       ctx.lineJoin = 'round';
@@ -422,23 +418,22 @@
 
       let x = 0;
       for (let i = 0; i < points.length; i++) {
-        // Create 3D ribbon phase displacement for each trace line
-        const timeFactor = Date.now() / 300;
-        const phase = Math.sin(l * 0.25 + i * 0.4 + timeFactor) * 0.25;
+        // Slowed down time factor so it doesn't rush on high refresh rate phones
+        const timeFactor = Date.now() / 1200;
+        const phase = Math.sin(l * 0.3 + i * 0.3 + timeFactor) * 0.2;
         const heightVal = Math.max(0.1, points[i] + phase);
 
-        // Alternate peaks and troughs for the classic sound wave profile
         const direction = (i % 2 === 0) ? 1 : -1;
         
-        // Spread the lines vertically to build thickness like the reference image
-        const verticalSpread = (l - totalLines / 2) * 1.8; 
+        // Flared out more with wider vertical spacing between lines
+        const verticalSpread = (l - totalLines / 2) * 2.8; 
         const y = centerY + (heightVal * maxAmplitude * direction) + verticalSpread;
 
         if (i === 0) {
           ctx.moveTo(x, y);
         } else {
           const prevX = x - sliceWidth;
-          const prevPhase = Math.sin(l * 0.25 + (i - 1) * 0.4 + timeFactor) * 0.25;
+          const prevPhase = Math.sin(l * 0.3 + (i - 1) * 0.3 + timeFactor) * 0.2;
           const prevHeight = Math.max(0.1, points[i - 1] + prevPhase);
           const prevDir = ((i - 1) % 2 === 0) ? 1 : -1;
           const prevY = centerY + (prevHeight * maxAmplitude * prevDir) + verticalSpread;
