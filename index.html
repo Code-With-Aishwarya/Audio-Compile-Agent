@@ -373,15 +373,44 @@
 
   function renderBars(data) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const barWidth = (canvas.width / data.length) * 1.5;
-    let x = 0;
-
-    for (let i = 0; i < data.length; i++) {
-      const barHeight = (data[i] / 255) * canvas.height;
-      ctx.fillStyle = '#10b981';
-      ctx.fillRect(x, canvas.height - barHeight, barWidth - 2, barHeight);
-      x += barWidth;
+    
+    // Reduce data points significantly so it's clean and less congested
+    const sliceSize = Math.max(1, Math.floor(data.length / 10));
+    const points = [];
+    for (let i = 0; i < data.length; i += sliceSize) {
+      points.push(data[i] / 255);
     }
+
+    ctx.beginPath();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#10b981'; // Sleek professional emerald accent color
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+
+    const sliceWidth = canvas.width / (points.length - 1);
+    let x = 0;
+    let centerY = canvas.height / 2;
+
+    for (let i = 0; i < points.length; i++) {
+      const heightMultiplier = points[i];
+      // Alternate direction for a natural flowing wave look
+      const direction = (i % 2 === 0) ? 1 : -1;
+      const y = centerY + (heightMultiplier * (canvas.height * 0.4) * direction);
+
+      if (i === 0) {
+        ctx.moveTo(x, y);
+      } else {
+        // Create smooth, organic curves between wave peaks
+        const prevX = x - sliceWidth;
+        const prevDirection = ((i - 1) % 2 === 0) ? 1 : -1;
+        const prevY = centerY + (points[i - 1] * (canvas.height * 0.4) * prevDirection);
+        const xc = (prevX + x) / 2;
+        const yc = (prevY + y) / 2;
+        ctx.quadraticCurveTo(prevX, prevY, xc, yc);
+      }
+      x += sliceWidth;
+    }
+    ctx.stroke();
   }
 
   function stopAudioVisualizer() {
