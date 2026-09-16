@@ -94,7 +94,7 @@
       <button id="toggleMicBtn" class="btn-primary" onclick="toggleListening()">
         🎤 Start Live Listening
       </button>
-      <button id="demoBtn" class="btn-demo" onclick="runPresetDemo()">
+      <button id="demoBtn" class="btn-demo" onclick="toggleDemo()">
         ⚡ Run Pitch Demo
       </button>
       <button class="btn-secondary" onclick="exportReport()">
@@ -141,7 +141,7 @@
   if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
     const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
     recognition = new SpeechRecognitionAPI();
-    recognition.lang = 'en-US'; // <--- CRITICAL FOR MOBILE
+    recognition.lang = 'en-US';
     recognition.continuous = false;
     recognition.interimResults = false;
 
@@ -188,11 +188,11 @@
     
     if (!isListening) {
       try {
-        isListening = true; // <--- SET THIS IMMEDIATELY SO THE WAVE STARTS
+        isListening = true;
         recognition.start();
         startAudioVisualizer();
       } catch (err) {
-        isListening = false; // Reset if it fails
+        isListening = false;
         console.error("Mic start err:", err);
       }
     } else {
@@ -261,14 +261,27 @@
     document.getElementById('actionCount').innerText = actionTotal;
   }
 
+  // Toggle Demo function for start/stop control
+  function toggleDemo() {
+    if (isRunningDemo) {
+      stopDemo();
+    } else {
+      runPresetDemo();
+    }
+  }
+
   function runPresetDemo() {
     if (isListening) toggleListening();
     clearAll();
     
     isRunningDemo = true;
+    const demoBtn = document.getElementById('demoBtn');
+    demoBtn.innerText = "⏹️ Stop Demo";
+    demoBtn.style.background = "#ef4444";
+    demoBtn.style.color = "#ffffff";
+
     document.getElementById('statusDot').classList.add('active');
     document.getElementById('statusText').innerText = "Simulating Team Audio...";
-    document.getElementById('demoBtn').style.background = "#4f46e5";
     
     startAudioVisualizer(true);
 
@@ -325,9 +338,14 @@
     if (synth) synth.cancel();
     if (demoTimer) clearTimeout(demoTimer);
     stopAudioVisualizer();
+
+    const demoBtn = document.getElementById('demoBtn');
+    demoBtn.innerText = "⚡ Run Pitch Demo";
+    demoBtn.style.background = "#8b5cf6";
+    demoBtn.style.color = "#ffffff";
+
     document.getElementById('statusDot').classList.remove('active');
-    document.getElementById('statusText').innerText = "Demo Ended";
-    document.getElementById('demoBtn').style.background = "#8b5cf6";
+    document.getElementById('statusText').innerText = "Demo Stopped";
   }
 
   function startAudioVisualizer(isSimulated = false) {
@@ -336,8 +354,6 @@
     canvas.width = canvas.offsetWidth;
     canvas.height = canvas.offsetHeight;
 
-    // FIX: On mobile devices, avoid calling getUserMedia because it locks 
-    // the microphone and blocks SpeechRecognition from receiving any audio.
     const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
     if (isSimulated || isMobile) {
@@ -364,14 +380,14 @@
     renderBars(dataArray);
   }
 
- function drawSimulatedWave() {
+  function drawSimulatedWave() {
     if (!isListening && !isRunningDemo) return;
     animationId = requestAnimationFrame(drawSimulatedWave);
     const simulatedData = new Uint8Array(32).map(() => Math.floor(Math.random() * 180 + 20));
     renderBars(simulatedData);
   }
 
- function renderBars(data) {
+  function renderBars(data) {
     if (!canvas || !ctx) return;
     
     if (canvas.width !== canvas.offsetWidth || canvas.height !== canvas.offsetHeight) {
@@ -381,18 +397,17 @@
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    const totalLines = 18; // Clean, distinct count for better spacing
+    const totalLines = 5; // Clean, un-congested professional look
     const centerY = canvas.height / 2;
-    const maxAmplitude = canvas.height * 0.45;
+    const maxAmplitude = canvas.height * 0.4;
 
-    const sliceSize = Math.max(1, Math.floor(data.length / 10));
+    const sliceSize = Math.max(1, Math.floor(data.length / 8));
     const points = [];
     
     for (let i = 0; i < data.length; i += sliceSize) {
       let val = data[i] / 255;
-      // Slower, smoother fallback motion (divided by 1200 instead of 180)
       if (val < 0.05) {
-        val = 0.25 + Math.sin(i * 0.5 + Date.now() / 1200) * 0.15;
+        val = 0.25 + Math.sin(i * 0.5 + Date.now() / 1500) * 0.15;
       }
       points.push(val);
     }
@@ -402,38 +417,29 @@
     for (let l = 0; l < totalLines; l++) {
       ctx.beginPath();
 
-      const isCore = l >= totalLines * 0.35 && l <= totalLines * 0.65;
-      const alpha = isCore ? 0.9 : 0.2 + (1 - (l / totalLines)) * 0.35;
+      const isCore = l === 2;
+      const alpha = isCore ? 1.0 : 0.4;
       
-      if (isCore) {
-        ctx.strokeStyle = `rgba(56, 189, 248, ${alpha})`;
-        ctx.lineWidth = 1.8; // Thicker core lines
-      } else {
-        ctx.strokeStyle = `rgba(37, 99, 235, ${alpha})`;
-        ctx.lineWidth = 1.1; // Thicker outer lines
-      }
-
+      ctx.strokeStyle = isCore ? '#38bdf8' : 'rgba(56, 189, 248, 0.35)';
+      ctx.lineWidth = isCore ? 2 : 1.2;
       ctx.lineJoin = 'round';
       ctx.lineCap = 'round';
 
       let x = 0;
       for (let i = 0; i < points.length; i++) {
-        // Slowed down time factor so it doesn't rush on high refresh rate phones
-        const timeFactor = Date.now() / 1200;
-        const phase = Math.sin(l * 0.3 + i * 0.3 + timeFactor) * 0.2;
+        const timeFactor = Date.now() / 1500;
+        const phase = Math.sin(l * 0.4 + i * 0.4 + timeFactor) * 0.15;
         const heightVal = Math.max(0.1, points[i] + phase);
 
         const direction = (i % 2 === 0) ? 1 : -1;
-        
-        // Flared out more with wider vertical spacing between lines
-        const verticalSpread = (l - totalLines / 2) * 2.8; 
+        const verticalSpread = (l - 2) * 6;
         const y = centerY + (heightVal * maxAmplitude * direction) + verticalSpread;
 
         if (i === 0) {
           ctx.moveTo(x, y);
         } else {
           const prevX = x - sliceWidth;
-          const prevPhase = Math.sin(l * 0.3 + (i - 1) * 0.3 + timeFactor) * 0.2;
+          const prevPhase = Math.sin(l * 0.4 + (i - 1) * 0.4 + timeFactor) * 0.15;
           const prevHeight = Math.max(0.1, points[i - 1] + prevPhase);
           const prevDir = ((i - 1) % 2 === 0) ? 1 : -1;
           const prevY = centerY + (prevHeight * maxAmplitude * prevDir) + verticalSpread;
@@ -447,6 +453,7 @@
       ctx.stroke();
     }
   }
+
   function stopAudioVisualizer() {
     if (animationId) cancelAnimationFrame(animationId);
     if (ctx && canvas) ctx.clearRect(0, 0, canvas.width, canvas.height);
