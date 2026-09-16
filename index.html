@@ -371,46 +371,44 @@
     renderBars(simulatedData);
   }
 
-  function renderBars(data) {
+ function renderBars(data) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Number of layered waves to create the dense, professional vector effect
-    const layerCount = 6;
-    const sliceSize = Math.max(1, Math.floor(data.length / 12));
+    const layerCount = 4;
+    const sliceSize = Math.max(1, Math.floor(data.length / 10));
     const points = [];
     
     for (let i = 0; i < data.length; i += sliceSize) {
-      points.push(data[i] / 255);
+      // Ensure a minimum height so it never flattens out into a dead line
+      let val = data[i] / 255;
+      if (val < 0.1) val = 0.2 + (Math.sin(i + Date.now() / 200) * 0.15);
+      points.push(val);
     }
 
     const centerY = canvas.height / 2;
     const sliceWidth = canvas.width / (points.length - 1);
 
-    // Draw multiple offset layers with gradient/transparency for the glowing vector look
     for (let l = 0; l < layerCount; l++) {
       ctx.beginPath();
       
-      // Fade out outer layers and make inner layers bright cyan/blue
-      const alpha = (1 - (l / layerCount)) * 0.4;
+      const alpha = (1 - (l / layerCount)) * 0.5;
       ctx.strokeStyle = l === 0 ? '#38bdf8' : `rgba(56, 189, 248, ${alpha})`;
-      ctx.lineWidth = l === 0 ? 2 : 1.2;
+      ctx.lineWidth = l === 0 ? 2.2 : 1.2;
       ctx.lineJoin = 'round';
       ctx.lineCap = 'round';
 
       let x = 0;
       for (let i = 0; i < points.length; i++) {
-        // Offset each layer slightly to create depth and thickness
         const waveFactor = points[i] * (1 - (l * 0.1));
         const direction = (i % 2 === 0) ? 1 : -1;
-        // Shift layers vertically based on index 'l'
-        const y = centerY + (waveFactor * (canvas.height * 0.38) * direction) + (l * 2 - 4);
+        const y = centerY + (waveFactor * (canvas.height * 0.4) * direction) + (l * 2 - 3);
 
         if (i === 0) {
           ctx.moveTo(x, y);
         } else {
           const prevX = x - sliceWidth;
           const prevDirection = ((i - 1) % 2 === 0) ? 1 : -1;
-          const prevY = centerY + ((points[i - 1] * (1 - (l * 0.1))) * (canvas.height * 0.38) * prevDirection) + (l * 2 - 4);
+          const prevY = centerY + ((points[i - 1] * (1 - (l * 0.1))) * (canvas.height * 0.4) * prevDirection) + (l * 2 - 3);
           const xc = (prevX + x) / 2;
           const yc = (prevY + y) / 2;
           ctx.quadraticCurveTo(prevX, prevY, xc, yc);
