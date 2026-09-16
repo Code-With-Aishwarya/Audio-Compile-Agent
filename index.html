@@ -334,7 +334,13 @@
     canvas.width = canvas.offsetWidth;
     canvas.height = canvas.offsetHeight;
 
-    if (!isSimulated && navigator.mediaDevices?.getUserMedia) {
+    // FIX: On mobile devices, avoid calling getUserMedia because it locks 
+    // the microphone and blocks SpeechRecognition from receiving any audio.
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+    if (isSimulated || isMobile) {
+      drawSimulatedWave();
+    } else if (navigator.mediaDevices?.getUserMedia) {
       navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         analyser = audioCtx.createAnalyser();
