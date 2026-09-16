@@ -6,10 +6,10 @@
   <title>Audio Compile Agent</title>
   <style>
     :root {
-      --bg: #0b0f19;
-      --card-bg: #161f30;
+      --bg: #07090e;
+      --card-bg: #111827;
       --accent: #10b981;
-      --accent-glow: rgba(16, 185, 129, 0.25);
+      --accent-glow: rgba(16, 185, 129, 0.2);
       --text: #f3f4f6;
       --muted: #9ca3af;
       --task: #3b82f6;
@@ -23,58 +23,80 @@
     .container { width: 100%; max-width: 900px; display: flex; flex-direction: column; gap: 1.5rem; }
     
     header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1f293d; padding-bottom: 1rem; }
-    h1 { font-size: 1.6rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 0.5rem; background: linear-gradient(to right, #ffffff, #e5e7eb); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    h1 { font-size: 1.5rem; font-weight: 600; color: #fff; letter-spacing: -0.02em; }
 
-    .status-pill { display: flex; align-items: center; gap: 0.5rem; background: rgba(0, 0, 0, 0.4); padding: 0.4rem 0.9rem; border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.05); font-size: 0.85rem; }
-    .status-dot { width: 10px; height: 10px; border-radius: 50%; background-color: #6b7280; }
-    .status-dot.active { background-color: var(--accent); box-shadow: 0 0 12px var(--accent); animation: pulse 1.5s infinite; }
+    .status-pill { display: flex; align-items: center; gap: 0.5rem; background: rgba(255, 255, 255, 0.03); padding: 0.35rem 0.85rem; border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.06); font-size: 0.8rem; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background-color: #6b7280; }
+    .status-dot.active { background-color: var(--accent); box-shadow: 0 0 10px var(--accent); animation: pulse 1.5s infinite; }
 
     @keyframes pulse {
       0% { transform: scale(0.95); opacity: 0.8; }
-      50% { transform: scale(1.15); opacity: 1; }
+      50% { transform: scale(1.2); opacity: 1; }
       100% { transform: scale(0.95); opacity: 0.8; }
     }
 
-    /* Controls & Audio Wave */
-    .controls-card { background: var(--card-bg); padding: 1.5rem; border-radius: 12px; border: 1px solid #1f293d; display: flex; flex-direction: column; gap: 1rem; }
-    .btn-group { display: flex; gap: 1rem; flex-wrap: wrap; }
+    /* Controls Card */
+    .controls-card { background: var(--card-bg); padding: 1.25rem 1.5rem; border-radius: 12px; border: 1px solid #1f293d; display: flex; flex-direction: column; gap: 1rem; }
+    .btn-group { display: flex; gap: 0.75rem; flex-wrap: wrap; }
     
-    button { padding: 0.75rem 1.25rem; border-radius: 8px; font-weight: 600; cursor: pointer; border: none; transition: all 0.2s ease; display: flex; align-items: center; gap: 0.5rem; }
-    .btn-primary { background: var(--accent); color: #000; font-weight: 700; box-shadow: 0 0 12px var(--accent-glow); }
+    button { padding: 0.65rem 1.1rem; border-radius: 8px; font-weight: 500; font-size: 0.875rem; cursor: pointer; border: none; transition: all 0.2s ease; display: flex; align-items: center; gap: 0.5rem; }
+    .btn-primary { background: var(--accent); color: #000; font-weight: 600; box-shadow: 0 0 12px var(--accent-glow); }
     .btn-primary:hover { opacity: 0.9; }
     .btn-secondary { background: #1f293d; color: var(--text); border: 1px solid #374151; }
     .btn-secondary:hover { background: #374151; }
-    .btn-demo { background: #8b5cf6; color: white; }
+    .btn-demo { background: #7c3aed; color: white; }
 
-    /* Visualizer canvas */
-    canvas { width: 100%; height: 60px; background: #0e1422; border-radius: 8px; }
+    /* Clean Minimalist Visualizer Wrapper */
+    .visualizer-container {
+      height: 48px;
+      background: #090d16;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.03);
+    }
+    .v-bar {
+      width: 4px;
+      height: 12px;
+      background: #374151;
+      border-radius: 4px;
+      transition: height 0.1s ease, background-color 0.2s ease;
+    }
+    .v-bar.active {
+      background: #38bdf8;
+    }
 
-    /* Main Grid */
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    /* Main Grid Layout */
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
     @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
 
-    .panel { background: var(--card-bg); border-radius: 12px; border: 1px solid #1f293d; padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem; height: 420px; }
-    .panel-title { font-size: 0.9rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; display: flex; justify-content: space-between; }
+    .panel { background: var(--card-bg); border-radius: 12px; border: 1px solid #1f293d; padding: 1.25rem; display: flex; flex-direction: column; gap: 0.85rem; height: 380px; }
+    .panel-title { font-size: 0.8rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; display: flex; justify-content: space-between; align-items: center; }
 
-    .stream-box, .cards-box { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 0.75rem; padding-right: 0.25rem; }
+    .stream-box, .cards-box { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 0.6rem; padding-right: 0.25rem; }
+    .stream-box::-webkit-scrollbar, .cards-box::-webkit-scrollbar { width: 4px; }
+    .stream-box::-webkit-scrollbar-thumb, .cards-box::-webkit-scrollbar-thumb { background: #2a3447; border-radius: 4px; }
     
-    .raw-text { font-family: monospace; font-size: 0.9rem; color: #d1d5db; line-height: 1.5; white-space: pre-wrap; }
+    .raw-text { font-family: monospace; font-size: 0.85rem; color: #d1d5db; line-height: 1.4; white-space: pre-wrap; }
     
-    /* Categorized Action Cards */
-    .card { background: #0f172a; padding: 0.75rem; border-radius: 8px; border-left: 4px solid var(--accent); animation: fadeIn 0.3s ease; }
+    /* Categorized Cards */
+    .card { background: #0a0f1d; padding: 0.75rem; border-radius: 8px; border-left: 3px solid var(--accent); animation: fadeIn 0.25s ease; border-top: 1px solid rgba(255,255,255,0.02); border-right: 1px solid rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.02); }
     .card.TASK { border-left-color: var(--task); }
     .card.QUERY { border-left-color: var(--query); }
     .card.NOTE { border-left-color: var(--note); }
     
-    .card-header { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; margin-bottom: 0.25rem; display: flex; justify-content: space-between; }
+    .card-header { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; margin-bottom: 0.2rem; display: flex; justify-content: space-between; opacity: 0.9; }
     .card.TASK .card-header { color: var(--task); }
     .card.QUERY .card-header { color: var(--query); }
     .card.NOTE .card-header { color: var(--note); }
-    .card-body { font-size: 0.875rem; color: #f3f4f6; }
+    .card-body { font-size: 0.85rem; color: #f3f4f6; line-height: 1.4; }
 
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
 
-    .metrics { display: flex; gap: 1rem; font-size: 0.8rem; color: var(--muted); }
+    .metrics { font-size: 0.75rem; color: var(--muted); font-weight: normal; }
     .metric-value { color: #fff; font-weight: 600; }
   </style>
 </head>
@@ -85,7 +107,7 @@
     <h1>Audio Compile Agent</h1>
     <div class="status-pill">
       <div id="statusDot" class="status-dot"></div>
-      <span id="statusText">Ready to compile</span>
+      <span id="statusText">Ready</span>
     </div>
   </header>
 
@@ -98,13 +120,16 @@
         ⚡ Run Pitch Demo
       </button>
       <button class="btn-secondary" onclick="exportReport()">
-        💾 Export Clean Report (.txt)
+        💾 Export Clean Report
       </button>
       <button class="btn-secondary" onclick="clearAll()">
         🗑️ Clear
       </button>
     </div>
-    <canvas id="visualizer"></canvas>
+    <!-- Simple, elegant minimalist visualizer bar elements -->
+    <div class="visualizer-container" id="visualizerBars">
+      <!-- 24 clean bars generated via script -->
+    </div>
   </section>
 
   <div class="grid">
@@ -112,13 +137,13 @@
     <div class="panel">
       <div class="panel-title">Raw Audio Stream <span class="metrics">Words: <span id="wordCount" class="metric-value">0</span></span></div>
       <div class="stream-box" id="rawStream">
-        <span class="raw-text" style="color: #6b7280;">Press "Start Live Listening" or "Run Pitch Demo" to begin streaming audio...</span>
+        <span class="raw-text" style="color: #4b5563;">Awaiting audio stream or demo execution...</span>
       </div>
     </div>
 
     <!-- Structured Action Cards -->
     <div class="panel">
-      <div class="panel-title">Real-Time Intent Compilation <span class="metrics">Actions Tagged: <span id="actionCount" class="metric-value">0</span></span></div>
+      <div class="panel-title">Structured Intent Compiler <span class="metrics">Actions: <span id="actionCount" class="metric-value">0</span></span></div>
       <div class="cards-box" id="cardsBox">
         <!-- Cards insert dynamically -->
       </div>
@@ -130,14 +155,25 @@
   let isListening = false;
   let isRunningDemo = false;
   let recognition = null;
-  let audioCtx, analyser, dataArray, canvas, ctx, animationId;
   let wordTotal = 0;
   let actionTotal = 0;
   let demoTimer = null;
+  let animInterval = null;
 
   const synth = window.speechSynthesis;
 
-  // Speech Recognition setup with mobile compatibility
+  // Initialize minimalist visualizer bars
+  const visContainer = document.getElementById('visualizerBars');
+  const totalBars = 28;
+  const barElements = [];
+  for (let i = 0; i < totalBars; i++) {
+    const bar = document.createElement('div');
+    bar.className = 'v-bar';
+    visContainer.appendChild(bar);
+    barElements.push(bar);
+  }
+
+  // Setup Speech Recognition
   if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
     const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
     recognition = new SpeechRecognitionAPI();
@@ -147,63 +183,88 @@
 
     recognition.onstart = () => {
       isListening = true;
-      const btn = document.getElementById('toggleMicBtn');
-      btn.innerText = "🛑 Stop Listening";
-      btn.style.background = "#ef4444";
-      btn.style.color = "#ffffff";
-      document.getElementById('statusDot').classList.add('active');
-      document.getElementById('statusText').innerText = "Agent Active & Processing";
+      updateUIState('active', 'Listening & Compiling...');
     };
 
     recognition.onresult = (event) => {
       const lastIndex = event.results.length - 1;
       const textPhrase = event.results[lastIndex][0].transcript.trim();
-      if (textPhrase) {
-        processTranscriptChunk(textPhrase);
-      }
+      if (textPhrase) processTranscriptChunk(textPhrase);
     };
 
-    recognition.onerror = (e) => {
-      console.warn("Speech API error:", e.error);
-      if(e.error === 'not-allowed') {
-        alert("Microphone permission denied. Try clicking 'Run Pitch Demo' instead.");
-      }
-    };
-
+    recognition.onerror = () => stopAllActivity();
     recognition.onend = () => {
       if (isListening && !isRunningDemo) {
-        try { recognition.start(); } catch (err) {}
+        try { recognition.start(); } catch (e) {}
       }
     };
-  } else {
-    alert("Web Speech API isn't fully supported in this browser. Use 'Run Pitch Demo' for demonstration!");
   }
 
   function toggleListening() {
-    if (isRunningDemo) {
-      stopDemo();
-    }
-    if (!recognition) return alert("Speech recognition unavailable.");
-    const btn = document.getElementById('toggleMicBtn');
+    // CRITICAL: Instantly interrupt any ongoing demo audio if user clicks to listen
+    interruptSpeechAndDemo();
+
+    if (!recognition) return alert("Speech recognition unavailable. Use 'Run Pitch Demo'.");
     
     if (!isListening) {
       try {
         isListening = true;
         recognition.start();
-        startAudioVisualizer();
+        startMinimalVisualizer();
       } catch (err) {
         isListening = false;
-        console.error("Mic start err:", err);
       }
     } else {
-      isListening = false;
-      recognition.stop();
-      stopAudioVisualizer();
-      btn.innerText = "🎤 Start Live Listening";
-      btn.style.background = "var(--accent)";
-      btn.style.color = "#000";
-      document.getElementById('statusDot').classList.remove('active');
-      document.getElementById('statusText').innerText = "Session Stopped";
+      stopAllActivity();
+    }
+  }
+
+  function toggleDemo() {
+    if (isRunningDemo) {
+      stopAllActivity();
+    } else {
+      runPresetDemo();
+    }
+  }
+
+  function interruptSpeechAndDemo() {
+    // Immediately cut off browser speech synthesis so judges can interrupt instantly
+    if (synth) synth.cancel();
+    if (demoTimer) clearTimeout(demoTimer);
+    isRunningDemo = false;
+  }
+
+  function stopAllActivity() {
+    interruptSpeechAndDemo();
+    isListening = false;
+    if (recognition) {
+      try { recognition.stop(); } catch(e) {}
+    }
+    stopMinimalVisualizer();
+    
+    const btn = document.getElementById('toggleMicBtn');
+    btn.innerText = "🎤 Start Live Listening";
+    btn.style.background = "var(--accent)";
+    btn.style.color = "#000";
+
+    const demoBtn = document.getElementById('demoBtn');
+    demoBtn.innerText = "⚡ Run Pitch Demo";
+    demoBtn.style.background = "#7c3aed";
+    demoBtn.style.color = "#white";
+
+    document.getElementById('statusDot').classList.remove('active');
+    document.getElementById('statusText').innerText = "Ready";
+  }
+
+  function updateUIState(stateType, message) {
+    const btn = document.getElementById('toggleMicBtn');
+    if (stateType === 'active') {
+      btn.innerText = "🛑 Stop Listening";
+      btn.style.background = "#ef4444";
+      btn.style.color = "#ffffff";
+      document.getElementById('statusDot').classList.add('active');
+      document.getElementById('statusText').innerText = message;
+      startMinimalVisualizer();
     }
   }
 
@@ -228,16 +289,13 @@
     const lower = text.toLowerCase().trim();
     let type = 'NOTE';
     
-    if (/^(hello|hi|hey|whatsapp|whats up|good morning|good evening|thanks|thank you|bye)$/i.test(lower) || 
-        /^(hello|hi|hey)\s+(there|everyone|team|whatsapp|guys)$/i.test(lower)) {
+    if (/^(hello|hi|hey|whatsapp|good morning|thanks|thank you|bye)$/i.test(lower)) {
       type = 'GREETING';
     } 
-    else if (/\b(need to|have to|must|will do|action item|task|todo|assign|remember to|deadline|finish|submit|build|fix|update|send|change|create)\b/i.test(lower)) {
+    else if (/\b(need to|have to|must|action item|task|todo|assign|remember to|deadline|finish|submit|build|fix|update|send|create)\b/i.test(lower)) {
       type = 'TASK';
     } 
-    else if (/\b(what|why|how|when|where|who|which)\b/i.test(lower) || 
-             /\b(can we|should we|could you|is it|are we|do you|tell me|check)\b/i.test(lower) || 
-             lower.includes('?')) {
+    else if (/\b(what|why|how|when|where|who|which|can we|should we|could you|is it|do you)\b/i.test(lower) || lower.includes('?')) {
       type = 'QUERY';
     }
 
@@ -261,17 +319,8 @@
     document.getElementById('actionCount').innerText = actionTotal;
   }
 
-  // Toggle Demo function for start/stop control
-  function toggleDemo() {
-    if (isRunningDemo) {
-      stopDemo();
-    } else {
-      runPresetDemo();
-    }
-  }
-
   function runPresetDemo() {
-    if (isListening) toggleListening();
+    stopAllActivity();
     clearAll();
     
     isRunningDemo = true;
@@ -281,23 +330,23 @@
     demoBtn.style.color = "#ffffff";
 
     document.getElementById('statusDot').classList.add('active');
-    document.getElementById('statusText').innerText = "Simulating Team Audio...";
-    
-    startAudioVisualizer(true);
+    document.getElementById('statusText').innerText = "Demo Running (Interruptible)";
+    startMinimalVisualizer();
 
     const demoScript = [
-      "Hello everyone, welcome to the project review meeting.",
-      "What is the final deadline for the code submission tonight?",
-      "We need to fix the database authorization edge case immediately.",
-      "Please assign the frontend deployment pipeline task to Sarah.",
-      "Note that all API keys should be properly encrypted before pushing to Github."
+      "Hello everyone, welcome to the project presentation.",
+      "What is the core architecture plan for our backend microservices?",
+      "We need to finalize the database authorization rules by tonight.",
+      "Please assign the UI deployment task to Sarah immediately.",
+      "Note that all API endpoints must be fully secured before production release."
     ];
 
     let currentIndex = 0;
 
     function playNextStep() {
+      // Check if user interrupted or stopped the demo
       if (!isRunningDemo || currentIndex >= demoScript.length) {
-        stopDemo();
+        if (currentIndex >= demoScript.length) stopAllActivity();
         return;
       }
 
@@ -314,7 +363,7 @@
 
         utterance.onend = () => {
           if (isRunningDemo) {
-            demoTimer = setTimeout(playNextStep, 800);
+            demoTimer = setTimeout(playNextStep, 900);
           }
         };
 
@@ -333,136 +382,32 @@
     playNextStep();
   }
 
-  function stopDemo() {
-    isRunningDemo = false;
-    if (synth) synth.cancel();
-    if (demoTimer) clearTimeout(demoTimer);
-    stopAudioVisualizer();
-
-    const demoBtn = document.getElementById('demoBtn');
-    demoBtn.innerText = "⚡ Run Pitch Demo";
-    demoBtn.style.background = "#8b5cf6";
-    demoBtn.style.color = "#ffffff";
-
-    document.getElementById('statusDot').classList.remove('active');
-    document.getElementById('statusText').innerText = "Demo Stopped";
-  }
-
-  function startAudioVisualizer(isSimulated = false) {
-    canvas = document.getElementById('visualizer');
-    ctx = canvas.getContext('2d');
-    canvas.width = canvas.offsetWidth;
-    canvas.height = canvas.offsetHeight;
-
-    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-    if (isSimulated || isMobile) {
-      drawSimulatedWave();
-    } else if (navigator.mediaDevices?.getUserMedia) {
-      navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        analyser = audioCtx.createAnalyser();
-        const source = audioCtx.createMediaStreamSource(stream);
-        source.connect(analyser);
-        analyser.fftSize = 64;
-        dataArray = new Uint8Array(analyser.frequencyBinCount);
-        draw();
-      }).catch(() => drawSimulatedWave());
-    } else {
-      drawSimulatedWave();
-    }
-  }
-
-  function draw() {
-    if (!isListening) return;
-    animationId = requestAnimationFrame(draw);
-    analyser.getByteFrequencyData(dataArray);
-    renderBars(dataArray);
-  }
-
-  function drawSimulatedWave() {
-    if (!isListening && !isRunningDemo) return;
-    animationId = requestAnimationFrame(drawSimulatedWave);
-    const simulatedData = new Uint8Array(32).map(() => Math.floor(Math.random() * 180 + 20));
-    renderBars(simulatedData);
-  }
-
-  function renderBars(data) {
-    if (!canvas || !ctx) return;
-    
-    if (canvas.width !== canvas.offsetWidth || canvas.height !== canvas.offsetHeight) {
-      canvas.width = canvas.offsetWidth || 300;
-      canvas.height = canvas.offsetHeight || 100;
-    }
-
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    const totalLines = 5; // Clean, un-congested professional look
-    const centerY = canvas.height / 2;
-    const maxAmplitude = canvas.height * 0.4;
-
-    const sliceSize = Math.max(1, Math.floor(data.length / 8));
-    const points = [];
-    
-    for (let i = 0; i < data.length; i += sliceSize) {
-      let val = data[i] / 255;
-      if (val < 0.05) {
-        val = 0.25 + Math.sin(i * 0.5 + Date.now() / 1500) * 0.15;
-      }
-      points.push(val);
-    }
-
-    const sliceWidth = canvas.width / Math.max(1, points.length - 1);
-
-    for (let l = 0; l < totalLines; l++) {
-      ctx.beginPath();
-
-      const isCore = l === 2;
-      const alpha = isCore ? 1.0 : 0.4;
-      
-      ctx.strokeStyle = isCore ? '#38bdf8' : 'rgba(56, 189, 248, 0.35)';
-      ctx.lineWidth = isCore ? 2 : 1.2;
-      ctx.lineJoin = 'round';
-      ctx.lineCap = 'round';
-
-      let x = 0;
-      for (let i = 0; i < points.length; i++) {
-        const timeFactor = Date.now() / 1500;
-        const phase = Math.sin(l * 0.4 + i * 0.4 + timeFactor) * 0.15;
-        const heightVal = Math.max(0.1, points[i] + phase);
-
-        const direction = (i % 2 === 0) ? 1 : -1;
-        const verticalSpread = (l - 2) * 6;
-        const y = centerY + (heightVal * maxAmplitude * direction) + verticalSpread;
-
-        if (i === 0) {
-          ctx.moveTo(x, y);
+  function startMinimalVisualizer() {
+    if (animInterval) clearInterval(animInterval);
+    animInterval = setInterval(() => {
+      barElements.forEach((bar, idx) => {
+        const height = Math.floor(Math.random() * 28 + 6);
+        bar.style.height = `${height}px`;
+        if (height > 18) {
+          bar.classList.add('active');
         } else {
-          const prevX = x - sliceWidth;
-          const prevPhase = Math.sin(l * 0.4 + (i - 1) * 0.4 + timeFactor) * 0.15;
-          const prevHeight = Math.max(0.1, points[i - 1] + prevPhase);
-          const prevDir = ((i - 1) % 2 === 0) ? 1 : -1;
-          const prevY = centerY + (prevHeight * maxAmplitude * prevDir) + verticalSpread;
-
-          const xc = (prevX + x) / 2;
-          const yc = (prevY + y) / 2;
-          ctx.quadraticCurveTo(prevX, prevY, xc, yc);
+          bar.classList.remove('active');
         }
-        x += sliceWidth;
-      }
-      ctx.stroke();
-    }
+      });
+    }, 110);
   }
 
-  function stopAudioVisualizer() {
-    if (animationId) cancelAnimationFrame(animationId);
-    if (ctx && canvas) ctx.clearRect(0, 0, canvas.width, canvas.height);
+  function stopMinimalVisualizer() {
+    if (animInterval) clearInterval(animInterval);
+    barElements.forEach(bar => {
+      bar.style.height = '10px';
+      bar.classList.remove('active');
+    });
   }
 
   function clearAll() {
-    if (synth) synth.cancel();
-    if (demoTimer) clearTimeout(demoTimer);
-    document.getElementById('rawStream').innerHTML = '<span class="raw-text" style="color: #6b7280;">Press "Start Live Listening" or "Run Pitch Demo" to begin streaming audio...</span>';
+    interruptSpeechAndDemo();
+    document.getElementById('rawStream').innerHTML = '<span class="raw-text" style="color: #4b5563;">Awaiting audio stream or demo execution...</span>';
     document.getElementById('cardsBox').innerHTML = '';
     wordTotal = 0;
     actionTotal = 0;
@@ -472,10 +417,10 @@
 
   function exportReport() {
     const cards = document.querySelectorAll('.card');
-    if (!cards.length) return alert("No transcript data available to export.");
+    if (!cards.length) return alert("No compiler data available to export.");
 
     let output = `=======================================\n`;
-    output += `AUDIO COMPILE AGENT - EXECUTIVE SUMMARY\n`;
+    output += `AUDIO COMPILE AGENT - EXECUTIVE REPORT\n`;
     output += `Generated: ${new Date().toLocaleString()}\n`;
     output += `=======================================\n\n`;
 
@@ -489,7 +434,7 @@
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Audio_Compile_Summary_${Date.now()}.txt`;
+    a.download = `Audio_Compile_Report_${Date.now()}.txt`;
     a.click();
     URL.revokeObjectURL(url);
   }
