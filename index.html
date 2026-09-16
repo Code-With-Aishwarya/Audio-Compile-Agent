@@ -374,41 +374,54 @@
  function renderBars(data) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    const layerCount = 4;
-    const sliceSize = Math.max(1, Math.floor(data.length / 10));
+    // Number of stacked lines to match your reference image density
+    const totalLines = 28; 
+    const sliceSize = Math.max(1, Math.floor(data.length / 14));
     const points = [];
     
     for (let i = 0; i < data.length; i += sliceSize) {
-      // Ensure a minimum height so it never flattens out into a dead line
       let val = data[i] / 255;
-      if (val < 0.1) val = 0.2 + (Math.sin(i + Date.now() / 200) * 0.15);
+      if (val < 0.05) val = 0.15 + (Math.sin(i + Date.now() / 150) * 0.1);
       points.push(val);
     }
 
     const centerY = canvas.height / 2;
     const sliceWidth = canvas.width / (points.length - 1);
 
-    for (let l = 0; l < layerCount; l++) {
+    // Loop to draw dozens of dense, glowing wave traces
+    for (let l = 0; l < totalLines; l++) {
       ctx.beginPath();
       
-      const alpha = (1 - (l / layerCount)) * 0.5;
-      ctx.strokeStyle = l === 0 ? '#38bdf8' : `rgba(56, 189, 248, ${alpha})`;
-      ctx.lineWidth = l === 0 ? 2.2 : 1.2;
-      ctx.lineJoin = 'round';
-      ctx.lineCap = 'round';
+      // Center lines are bright cyan, outer fading lines are deeper transparent blue
+      const intensity = 1 - (l / totalLines);
+      if (l < totalLines * 0.3) {
+        ctx.strokeStyle = `rgba(56, 189, 248, ${0.15 + intensity * 0.5})`; // Bright cyan glow
+        ctx.lineWidth = 1.2;
+      } else {
+        ctx.strokeStyle = `rgba(37, 99, 235, ${intensity * 0.35})`; // Deep vector blue
+        ctx.lineWidth = 0.8;
+      }
 
       let x = 0;
       for (let i = 0; i < points.length; i++) {
-        const waveFactor = points[i] * (1 - (l * 0.1));
+        // Phase-shift each line slightly using index 'l' to create that 3D ribbon depth
+        const phaseOffset = Math.sin(l * 0.3 + i * 0.5) * 0.2;
+        const waveFactor = Math.max(0.05, points[i] + phaseOffset);
+        
+        // Alternate peak directions for the organic waveform shape
         const direction = (i % 2 === 0) ? 1 : -1;
-        const y = centerY + (waveFactor * (canvas.height * 0.4) * direction) + (l * 2 - 3);
+        const spread = (l - (totalLines / 2)) * 0.8; // Spread lines vertically
+        const y = centerY + (waveFactor * (canvas.height * 0.38) * direction) + spread;
 
         if (i === 0) {
           ctx.moveTo(x, y);
         } else {
           const prevX = x - sliceWidth;
-          const prevDirection = ((i - 1) % 2 === 0) ? 1 : -1;
-          const prevY = centerY + ((points[i - 1] * (1 - (l * 0.1))) * (canvas.height * 0.4) * prevDirection) + (l * 2 - 3);
+          const prevPhase = Math.sin(l * 0.3 + (i - 1) * 0.5) * 0.2;
+          const prevWave = Math.max(0.05, points[i - 1] + prevPhase);
+          const prevDir = ((i - 1) % 2 === 0) ? 1 : -1;
+          const prevY = centerY + (prevWave * (canvas.height * 0.38) * prevDir) + spread;
+          
           const xc = (prevX + x) / 2;
           const yc = (prevY + y) / 2;
           ctx.quadraticCurveTo(prevX, prevY, xc, yc);
@@ -418,7 +431,6 @@
       ctx.stroke();
     }
   }
-
   function stopAudioVisualizer() {
     if (animationId) cancelAnimationFrame(animationId);
     if (ctx && canvas) ctx.clearRect(0, 0, canvas.width, canvas.height);
