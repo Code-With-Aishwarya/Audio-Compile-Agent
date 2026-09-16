@@ -362,8 +362,8 @@
     renderBars(dataArray);
   }
 
-  function drawSimulatedWave() {
-    if (!isRunningDemo) return;
+ function drawSimulatedWave() {
+    if (!isListening && !isRunningDemo) return;
     animationId = requestAnimationFrame(drawSimulatedWave);
     const simulatedData = new Uint8Array(32).map(() => Math.floor(Math.random() * 180 + 20));
     renderBars(simulatedData);
