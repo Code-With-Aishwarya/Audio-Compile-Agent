@@ -137,11 +137,12 @@
 
   const synth = window.speechSynthesis;
 
-  // Speech Recognition setup
+  // Speech Recognition setup with mobile compatibility
   if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    recognition = new SpeechRecognition();
-    recognition.continuous = true;
+    const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SpeechRecognitionAPI();
+    recognition.lang = 'en-US'; // <--- CRITICAL FOR MOBILE
+    recognition.continuous = false;
     recognition.interimResults = false;
 
     recognition.onstart = () => {
@@ -208,19 +209,16 @@
     const rawBox = document.getElementById('rawStream');
     if (rawBox.children[0]?.style?.color) rawBox.innerHTML = '';
 
-    // Append to raw transcript
     const p = document.createElement('p');
     p.className = 'raw-text';
     p.innerText = text;
     rawBox.appendChild(p);
     rawBox.scrollTop = rawBox.scrollHeight;
 
-    // Update Word Count
     const words = text.trim().split(/\s+/).filter(Boolean).length;
     wordTotal += words;
     document.getElementById('wordCount').innerText = wordTotal;
 
-    // Parse Intent
     parseIntentAndAddCard(text);
   }
 
@@ -261,7 +259,6 @@
     document.getElementById('actionCount').innerText = actionTotal;
   }
 
-  // Pre-scripted demo sequence synced directly with Audio completion
   function runPresetDemo() {
     if (isListening) toggleListening();
     clearAll();
@@ -292,20 +289,17 @@
       const currentText = demoScript[currentIndex];
       currentIndex++;
 
-      // Process and render text on screen
       processTranscriptChunk(currentText);
 
-      // Speak text fully before queueing next line
       if ('speechSynthesis' in window) {
         const utterance = new SpeechSynthesisUtterance(currentText);
         utterance.rate = 1.0;
         utterance.pitch = 1.0;
         utterance.lang = 'en-US';
 
-        // Wait for speech to end completely before proceeding
         utterance.onend = () => {
           if (isRunningDemo) {
-            demoTimer = setTimeout(playNextStep, 800); // 800ms natural break between speech
+            demoTimer = setTimeout(playNextStep, 800);
           }
         };
 
@@ -334,7 +328,6 @@
     document.getElementById('demoBtn').style.background = "#8b5cf6";
   }
 
-  // Visualizer Logic
   function startAudioVisualizer(isSimulated = false) {
     canvas = document.getElementById('visualizer');
     ctx = canvas.getContext('2d');
@@ -422,36 +415,6 @@
     a.click();
     URL.revokeObjectURL(url);
   }
-  // This ensures it works on both laptops and phones
-window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-if (!window.SpeechRecognition) {
-    alert("Speech Recognition is not supported on this browser. Please use Google Chrome on Android.");
-} else {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-const recognition = new SpeechRecognition();
-recognition.lang = 'en-US';
-    recognition.continuous = false; // Set to true if you want continuous listening
-    recognition.interimResults = true; // Shows words as you speak
-
-    recognition.onresult = function(event) {
-        let transcript = '';
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-            transcript += event.results[i][0].transcript;
-        }
-        // This puts the spoken text directly into your text box/display element
-        document.getElementById('output').innerText = transcript;
-    };
-
-    recognition.onerror = function(event) {
-        console.error("Speech recognition error", event.error);
-    };
-
-    // Trigger this when your "Start Listening" button is clicked
-    function startListening() {
-        recognition.start();
-    }
-}
 </script>
 
 </body>
