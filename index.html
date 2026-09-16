@@ -188,9 +188,11 @@
     
     if (!isListening) {
       try {
+        isListening = true; // <--- SET THIS IMMEDIATELY SO THE WAVE STARTS
         recognition.start();
         startAudioVisualizer();
       } catch (err) {
+        isListening = false; // Reset if it fails
         console.error("Mic start err:", err);
       }
     } else {
